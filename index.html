@@ -2,19 +2,67 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Google Snake Game Clone</title>
+  <title>Smart Snake Game</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<h1>Snake</h1>
-<canvas id="game" width="400" height="400"></canvas>
-<p class="info">
-  Use arrow keys to move.  
-  Press Space to restart.
-</p>
+<div class="top-bar">
+  <h1>Snake</h1>
+
+  <div class="controls-row">
+    <div class="info-box">
+      <span id="score">Score: 0</span>
+      <span id="highscore">Best: 0</span>
+    </div>
+
+    <div class="settings-box">
+      <label>
+        Theme:
+        <select id="theme-select">
+          <option value="classic">Classic</option>
+          <option value="dark">Dark</option>
+          <option value="neon">Neon</option>
+          <option value="retro">Retro</option>
+          <option value="pastel">Pastel</option>
+        </select>
+      </label>
+
+      <label>
+        Speed:
+        <select id="speed-select">
+          <option value="slow">Slow</option>
+          <option value="normal" selected>Normal</option>
+          <option value="fast">Fast</option>
+        </select>
+      </label>
+
+      <label class="toggle">
+        <input type="checkbox" id="sound-toggle" checked>
+        <span>Sound</span>
+      </label>
+
+      <label class="toggle">
+        <input type="checkbox" id="vibrate-toggle" checked>
+        <span>Vibration</span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<canvas id="game"></canvas>
+
+<div id="mobile-controls" class="hidden">
+  <button data-dir="up">▲</button>
+  <div class="middle">
+    <button data-dir="left">◀</button>
+    <button data-dir="right">▶</button>
+  </div>
+  <button data-dir="down">▼</button>
+</div>
+
+<div id="message"></div>
 
 <script src="game.js"></script>
 </body>
 </html>
-
