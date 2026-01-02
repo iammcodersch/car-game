@@ -1,125 +1,182 @@
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-// Set canvas size
-const gameWidth = window.innerWidth;
-const gameHeight = window.innerHeight;
-canvas.width = gameWidth;
-canvas.height = gameHeight;
+// Grid setup
+const tileCount = 20;
+const tileSize = canvas.width / tileCount;
 
-// Car object
-const car = {
-  x: gameWidth / 2 - 50,
-  y: gameHeight - 150,
-  width: 50,
-  height: 100,
-  speed: 5,
-  dx: 0,
-  dy: 0,
-  moveLeft: false,
-  moveRight: false,
-  moving: false,
-  maxSpeed: 10,
-};
+// Snake state
+let snake = [
+  { x: 10, y: 10 },
+  { x: 9, y: 10 },
+  { x: 8, y: 10 }
+];
+let vx = 1;
+let vy = 0;
 
-// Handle keyboard input
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowLeft') car.moveLeft = true;
-  if (e.key === 'ArrowRight') car.moveRight = true;
-  if (e.key === 'ArrowUp') car.moving = true; // Accelerate
-});
+// Food
+let food = randomFood();
 
-document.addEventListener('keyup', (e) => {
-  if (e.key === 'ArrowLeft') car.moveLeft = false;
-  if (e.key === 'ArrowRight') car.moveRight = false;
-  if (e.key === 'ArrowUp') car.moving = false; // Stop accelerating
-});
+// Game state
+let gameOver = false;
+let score = 0;
+let speed = 8; // frames per second
 
-// Move car based on keyboard input
-function moveCar() {
-  if (car.moveLeft && car.x > 0) car.dx = -car.speed;
-  if (car.moveRight && car.x + car.width < gameWidth) car.dx = car.speed;
-  if (!car.moveLeft && !car.moveRight) car.dx = 0;
-
-  // Accelerate the car
-  if (car.moving) {
-    if (car.dy < car.maxSpeed) car.dy += 0.1;
-  } else {
-    if (car.dy > 0) car.dy -= 0.1;
-  }
-
-  // Update car position
-  car.x += car.dx;
-  car.y -= car.dy;
-
-  // Prevent car from going off-screen
-  if (car.x < 0) car.x = 0;
-  if (car.x + car.width > gameWidth) car.x = gameWidth - car.width;
-  if (car.y < 0) car.y = 0; // prevent going off the top
-  if (car.y + car.height > gameHeight) car.y = gameHeight - car.height; // prevent going off the bottom
+function randomFood() {
+  return {
+    x: Math.floor(Math.random() * tileCount),
+    y: Math.floor(Math.random() * tileCount)
+  };
 }
 
-// Draw car
-function drawCar() {
-  ctx.fillStyle = 'red';
-  ctx.fillRect(car.x, car.y, car.width, car.height);
+function resetGame() {
+  snake = [
+    { x: 10, y: 10 },
+    { x: 9, y: 10 },
+    { x: 8, y: 10 }
+  ];
+  vx = 1;
+  vy = 0;
+  food = randomFood();
+  gameOver = false;
+  score = 0;
+  speed = 8;
 }
 
-// Track boundaries
-function drawTrack() {
-  ctx.strokeStyle = 'white';
-  ctx.lineWidth = 5;
-  ctx.setLineDash([15, 10]);
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(gameWidth, 0);
-  ctx.lineTo(gameWidth, gameHeight);
-  ctx.lineTo(0, gameHeight);
-  ctx.closePath();
-  ctx.stroke();
-}
-
-// Power-up system (simple boost for now)
-const powerUp = {
-  x: Math.random() * gameWidth,
-  y: Math.random() * gameHeight,
-  size: 20,
-  active: true,
-};
-
-function drawPowerUp() {
-  if (powerUp.active) {
-    ctx.fillStyle = 'green';
+function drawGrid() {
+  ctx.strokeStyle = "#303134";
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= tileCount; i++) {
     ctx.beginPath();
-    ctx.arc(powerUp.x, powerUp.y, powerUp.size, 0, 2 * Math.PI);
-    ctx.fill();
+    ctx.moveTo(i * tileSize, 0);
+    ctx.lineTo(i * tileSize, canvas.height);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(0, i * tileSize);
+    ctx.lineTo(canvas.width, i * tileSize);
+    ctx.stroke();
   }
 }
 
-// Collision detection for power-up
-function checkCollision() {
-  const distX = Math.abs(car.x + car.width / 2 - powerUp.x);
-  const distY = Math.abs(car.y + car.height / 2 - powerUp.y);
-
-  if (distX < car.width / 2 + powerUp.size && distY < car.height / 2 + powerUp.size) {
-    powerUp.active = false; // Power-up is collected
-    car.speed = 10; // Temporary boost
-    setTimeout(() => car.speed = 5, 5000); // Boost lasts 5 seconds
+function drawSnake() {
+  for (let i = 0; i < snake.length; i++) {
+    const segment = snake[i];
+    ctx.fillStyle = i === 0 ? "#34a853" : "#4caf50";
+    ctx.fillRect(
+      segment.x * tileSize + 1,
+      segment.y * tileSize + 1,
+      tileSize - 2,
+      tileSize - 2
+    );
   }
 }
 
-// Game loop
+function drawFood() {
+  ctx.fillStyle = "#ea4335";
+  ctx.beginPath();
+  ctx.arc(
+    food.x * tileSize + tileSize / 2,
+    food.y * tileSize + tileSize / 2,
+    tileSize / 2 - 3,
+    0,
+    Math.PI * 2
+  );
+  ctx.fill();
+}
+
+function drawScore() {
+  ctx.fillStyle = "#e8eaed";
+  ctx.font = "16px Arial";
+  ctx.textAlign = "left";
+  ctx.fillText("Score: " + score, 10, 20);
+}
+
+function updateSnake() {
+  const head = {
+    x: snake[0].x + vx,
+    y: snake[0].y + vy
+  };
+
+  // Wrap around like Google Snake
+  if (head.x < 0) head.x = tileCount - 1;
+  if (head.x >= tileCount) head.x = 0;
+  if (head.y < 0) head.y = tileCount - 1;
+  if (head.y >= tileCount) head.y = 0;
+
+  // Check self collision
+  for (let i = 0; i < snake.length; i++) {
+    if (snake[i].x === head.x && snake[i].y === head.y) {
+      gameOver = true;
+      return;
+    }
+  }
+
+  snake.unshift(head);
+
+  // Eat food
+  if (head.x === food.x && head.y === food.y) {
+    score++;
+    food = randomFood();
+    if (speed < 20) speed += 0.5;
+  } else {
+    snake.pop();
+  }
+}
+
+function drawGameOver() {
+  ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "#e8eaed";
+  ctx.font = "30px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText("Game Over", canvas.width / 2, canvas.height / 2 - 10);
+
+  ctx.font = "18px Arial";
+  ctx.fillText(
+    "Score: " + score + "  |  Press Space to restart",
+    canvas.width / 2,
+    canvas.height / 2 + 25
+  );
+}
+
 function gameLoop() {
-  ctx.clearRect(0, 0, gameWidth, gameHeight); // Clear the canvas
+  setTimeout(() => {
+    requestAnimationFrame(gameLoop);
 
-  moveCar();  // Move the car
-  drawTrack();  // Draw track boundaries
-  drawCar();  // Draw the car
-  drawPowerUp();  // Draw power-up
-  checkCollision();  // Check for collisions with power-ups
+    if (gameOver) {
+      drawGameOver();
+      return;
+    }
 
-  requestAnimationFrame(gameLoop);  // Keep the game loop running
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    drawGrid();
+    updateSnake();
+    drawSnake();
+    drawFood();
+    drawScore();
+  }, 1000 / speed);
 }
 
-// Start the game
+document.addEventListener("keydown", (e) => {
+  if (e.code === "ArrowUp" && vy !== 1) {
+    vx = 0;
+    vy = -1;
+  } else if (e.code === "ArrowDown" && vy !== -1) {
+    vx = 0;
+    vy = 1;
+  } else if (e.code === "ArrowLeft" && vx !== 1) {
+    vx = -1;
+    vy = 0;
+  } else if (e.code === "ArrowRight" && vx !== -1) {
+    vx = 1;
+    vy = 0;
+  } else if (e.code === "Space") {
+    if (gameOver) resetGame();
+  }
+});
+
 gameLoop();
